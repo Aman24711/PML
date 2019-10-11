@@ -161,4 +161,4 @@ print(predictions)
 ```{r cache=FALSE}
 endTime <- Sys.time()
 ```
-The analysis was completed on `r format(Sys.time(), "%a %b %d %X %Y")`  in `r round(difftime(endTime, startTime , units = c( "secs")),0)` seconds.
+
