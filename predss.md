@@ -2,15 +2,15 @@
 title: "Practical Machine Learning Coursera Peer Assessment"
 output:
   html_document:
-    highlight: pygments
+    highlight: tango
     keep_md: yes
-    theme: united
+    theme: cosmos
   pdf_document:
-    highlight: zenburn
+    highlight: tango
 date: "11-Oct-19"
 ---
 
-## Summary
+## Synopsis
 
 This report uses machine learning algorithms to predict the manner in which users of exercise devices exercise. 
 
@@ -306,4 +306,4 @@ print(predictions)
 ```r
 endTime <- Sys.time()
 ```
-The analysis was completed on Fri Oct 11 5:55:20 PM 2019  in 0 seconds.
+The analysis was completed on Fri Oct 11 9:58:20 PM 2019  in 0 seconds.
