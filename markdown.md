@@ -1,0 +1,163 @@
+---
+title: "PML Peer Assessment"
+output:
+  pdf_document:
+    highlight: tango
+  md_document:
+    toc: TRUE
+    toc_depth: 2
+    highlight: tango
+    keep_md: yes
+    theme: cosmo
+date: "11-Oct-19"
+---
+
+### Synopsis
+
+This report uses machine learning algorithms to predict the manner in which users of exercise devices exercise. 
+
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website [here:](http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset). 
+
+### Data 
+
+The training data for this project are available here (as mentioned in the course): 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here (as mentioned in the course): 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+### Set the work environment and knitr options
+
+```{r setoptions}
+rm(list=ls(all=TRUE)) #we need to use an empty workspace
+startTime <- Sys.time()
+library(knitr)
+opts_chunk$set(echo = TRUE, cache= TRUE, results = 'markup')
+```
+
+### Load libraries and Set Seed (important for reproducibility)
+
+Load all libraries used, and setting seed for reproducibility. *Results are Hidden, Warnings & Messages are set to FALSE*
+
+```{r library_calls, message=FALSE, warning=FALSE, results='hide'}
+library(ElemStatLearn)
+library(randomForest)
+library(RCurl)
+library(rpart)
+library(caret)
+set.seed(1234)
+```
+
+### Load the data and clean it up if required
+
+```{r Ass_Dir Hide, echo=FALSE}
+data_dir <- "C:/Users/User/Desktop/MachineLearning/Practical-Machine-Learning-Peer-Assessment-1";
+pathAnswers <- "C:/Users/User/Desktop/MachineLearning/Practical-Machine-Learning-Peer-Assessment-1/"
+```
+
+
+Load and prepare the data
+
+```{r load_prep_call}
+trainingLink <- getURL("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+pml_CSV  <- read.csv(text = trainingLink, header=TRUE, sep=",", na.strings=c("NA",""))
+pml_CSV <- pml_CSV[,-1] # This is done to remove the first column that represents the ID and it isn't required for prediction
+```
+
+### Define the data Sets and the partitions
+
+Create data partitions of training data set and validating data set from the original training data set.
+
+```{r dataPart}
+inTrain = createDataPartition(pml_CSV$classe, p=0.60, list=FALSE) #To randomize the training and validating set 60:40 ratio
+new_training = pml_CSV[inTrain,] # the new training set
+validating = pml_CSV[-inTrain,] # validating set
+# to get dimension of the new training set
+dim(new_training)
+# to get the dimension of the validation set
+dim(validating)
+```
+## Cleaning further
+
+We need to remove columns with less data as it won't be good for prediction, we going to set the bench mark of 60% 
+
+```{r CkNA, echo=TRUE, results='asis'}
+# This chooses the number of cols with less than 60% of data in it
+sum((colSums(!is.na(new_training[,-ncol(new_training)])) < 0.6*nrow(new_training)))
+# removing columns before we apply the training data to the model.
+retain <- c((colSums(!is.na(new_training[,-ncol(new_training)])) >= 0.6*nrow(new_training)))
+new_training   <-  new_training[,retain]
+validating <- validating[,retain]
+# number of rows and columns of data in the final training set
+dim(new_training)
+# number of rows and columns of data in the final validating set
+dim(new_validating)
+```
+
+## Modeling the Data
+We are going to use Random Forest training model with the new training data set.
+
+```{r rf_apply}
+train_model <- randomForest(classe~.,data=new_training)
+print(train_model)
+```
+
+### Evaluating Model
+:
+
+```{r CkImportVar}
+importance(train_model)
+```
+
+Now we use confusion Matrix.
+
+```{r confMx}
+confusionMatrix(predict(model,newdata=validating[,-ncol(validating)]),validating$classe)
+```
+
+And confirmed the accuracy at validating data set by calculate it with the formula:
+
+```{r CAccur}
+accuracy <-c(as.numeric(predict(model,newdata=validating[,-ncol(validating)])==validating$classe))
+accuracy <-sum(accuracy)*100/nrow(validating)
+```
+
+Model Accuracy as tested over Validation set = **`r round(accuracy,1)`%**.  
+
+### Model Test
+
+Finally, we proceed with predicting the new values in the testing csv provided, first we apply the same data cleaning operations on it and coerce all columns of testing data set for the same class of previous data set. 
+
+#### Getting Testing Dataset
+
+```{r GetTestData}
+testingLink <- getURL("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+pml_CSV  <- read.csv(text = testingLink, header=TRUE, sep=",", na.strings=c("NA",""))
+pml_CSV <- pml_CSV[,-1] # Remove the first column that represents a ID Row
+pml_CSV <- pml_CSV[ , Keep] # Keep the same columns of testing dataset
+pml_CSV <- pml_CSV[,-ncol(pml_CSV)] # Remove the problem ID
+# Apply the Same Transformations and Coerce Testing Dataset
+# Coerce testing dataset to same class and strucuture of training dataset 
+testing <- rbind(training[100, -59] , pml_CSV) 
+# Apply the ID Row to row.names and 100 for dummy row from testing dataset 
+row.names(testing) <- c(100, 1:20)
+```
+
+#### Predicting with testing dataset
+
+```{r PredictingTestingResults}
+predictions <- predict(model,newdata=testing[-1,])
+print(predictions)
+```
+
+
+
+```{r cache=FALSE}
+endTime <- Sys.time()
+```
