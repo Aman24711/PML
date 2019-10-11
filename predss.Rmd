@@ -1,16 +1,18 @@
 ---
-title: "Practical Machine Learning Coursera Peer Assessment"
+title: "PML Peer Assessment"
 output:
   html_document:
-    highlight: pygments
+    toc: TRUE
+    toc_depth: 2
+    highlight: tango
     keep_md: yes
-    theme: united
+    theme: cosmo
   pdf_document:
-    highlight: zenburn
+    highlight: tango
 date: "11-Oct-19"
 ---
 
-## Summary
+### Synopsis
 
 This report uses machine learning algorithms to predict the manner in which users of exercise devices exercise. 
 
@@ -21,11 +23,11 @@ Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible t
 
 ### Data 
 
-The training data for this project are available here: 
+The training data for this project are available here (as mentioned in the course): 
 
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
 
-The test data are available here: 
+The test data are available here (as mentioned in the course): 
 
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
@@ -33,26 +35,26 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 ### Set the work environment and knitr options
 
 ```{r setoptions}
-rm(list=ls(all=TRUE)) #start with empty workspace
+rm(list=ls(all=TRUE)) #we need to use an empty workspace
 startTime <- Sys.time()
 library(knitr)
-opts_chunk$set(echo = TRUE, cache= TRUE, results = 'hold')
+opts_chunk$set(echo = TRUE, cache= TRUE, results = 'markup')
 ```
 
-### Load libraries and Set Seed
+### Load libraries and Set Seed (important for reproducibility)
 
-Load all libraries used, and setting seed for reproducibility. *Results Hidden, Warnings FALSE and Messages FALSE*
+Load all libraries used, and setting seed for reproducibility. *Results are Hidden, Warnings & Messages are set to FALSE*
 
 ```{r library_calls, message=FALSE, warning=FALSE, results='hide'}
 library(ElemStatLearn)
-library(caret)
-library(rpart)
 library(randomForest)
 library(RCurl)
-set.seed(2014)
+library(rpart)
+library(caret)
+set.seed(1234)
 ```
 
-### Load and prepare the data and clean up the data
+### Load the data and clean it up if required
 
 ```{r Ass_Dir Hide, echo=FALSE}
 data_dir <- "C:/Users/User/Desktop/MachineLearning/Practical-Machine-Learning-Peer-Assessment-1";
@@ -65,55 +67,55 @@ Load and prepare the data
 ```{r load_prep_call}
 trainingLink <- getURL("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
 pml_CSV  <- read.csv(text = trainingLink, header=TRUE, sep=",", na.strings=c("NA",""))
-pml_CSV <- pml_CSV[,-1] # Remove the first column that represents a ID Row
+pml_CSV <- pml_CSV[,-1] # This is done to remove the first column that represents the ID and it isn't required for prediction
 ```
 
-### Data Sets Partitions Definitions
+### Define the data Sets and the partitions
 
-Create data partitions of training and validating data sets.
+Create data partitions of training data set and validating data set from the original training data set.
 
 ```{r dataPart}
-inTrain = createDataPartition(pml_CSV$classe, p=0.60, list=FALSE)
-training = pml_CSV[inTrain,]
-validating = pml_CSV[-inTrain,]
-# number of rows and columns of data in the training set
-dim(training)
-# number of rows and columns of data in the validating set
+inTrain = createDataPartition(pml_CSV$classe, p=0.60, list=FALSE) #To randomize the training and validating set 60:40 ratio
+new_training = pml_CSV[inTrain,] # the new training set
+validating = pml_CSV[-inTrain,] # validating set
+# to get dimension of the new training set
+dim(new_training)
+# to get the dimension of the validation set
 dim(validating)
 ```
-## Data Exploration and Cleaning
+## Cleaning further
 
-Since we choose a random forest model and we have a data set with too many columns, first we check if we have many problems with columns without data. So, remove columns that have less than 60% of data entered.
+We need to remove columns with less data as it won't be good for prediction, we going to set the bench mark of 60% 
 
 ```{r CkNA, echo=TRUE, results='asis'}
-# Number of cols with less than 60% of data
-sum((colSums(!is.na(training[,-ncol(training)])) < 0.6*nrow(training)))
-# apply our definition of remove columns that most doesn't have data, before its apply to the model.
-Keep <- c((colSums(!is.na(training[,-ncol(training)])) >= 0.6*nrow(training)))
-training   <-  training[,Keep]
-validating <- validating[,Keep]
+# This chooses the number of cols with less than 60% of data in it
+sum((colSums(!is.na(new_training[,-ncol(new_training)])) < 0.6*nrow(new_training)))
+# removing columns before we apply the training data to the model.
+retain <- c((colSums(!is.na(new_training[,-ncol(new_training)])) >= 0.6*nrow(new_training)))
+new_training   <-  new_training[,retain]
+validating <- validating[,retain]
 # number of rows and columns of data in the final training set
-dim(training)
+dim(new_training)
 # number of rows and columns of data in the final validating set
-dim(validating)
+dim(new_validating)
 ```
 
-## Modeling
-In random forests, there is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the execution. So, we proceed with the training the model (Random Forest) with the training data set.
+## Modeling the Data
+We are going to use Random Forest training model with the new training data set.
 
 ```{r rf_apply}
-model <- randomForest(classe~.,data=training)
-print(model)
+train_model <- randomForest(classe~.,data=new_training)
+print(train_model)
 ```
 
-### Model Evaluate
-And proceed with the verification of variable importance measures as produced by random Forest:
+### Evaluating Model
+:
 
 ```{r CkImportVar}
-importance(model)
+importance(train_model)
 ```
 
-Now we evaluate our model results through confusion Matrix.
+Now we use confusion Matrix.
 
 ```{r confMx}
 confusionMatrix(predict(model,newdata=validating[,-ncol(validating)]),validating$classe)
